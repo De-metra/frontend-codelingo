@@ -98,6 +98,55 @@
                             </div>
                             <textarea x-model="codeAnswer" class="w-full h-64 bg-transparent text-slate-200 font-mono focus:outline-none resize-none" spellcheck="false"></textarea>
                         </div>
+
+                        <div 
+                            x-show="isWrong && codeError" 
+                            x-transition
+                            class="bg-red-50 border-2 border-red-100 rounded-2xl p-4 animate-fadeIn"
+                        >
+                            <div class="flex items-center gap-2 mb-2 text-red-600 font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-sm uppercase tracking-wide">Ошибка выполнения:</span>
+                            </div>
+                            <pre 
+                                class="text-xs md:text-sm font-mono text-red-800 overflow-x-auto whitespace-pre-wrap leading-relaxed" 
+                                x-text="codeError"
+                            ></pre>
+                        </div>
+
+                        <div 
+                            x-show="isWrong && failedTest" 
+                            x-transition
+                            class="bg-orange-50 border-2 border-orange-100 rounded-2xl overflow-hidden animate-fadeIn"
+                        >
+                            <div class="bg-orange-100 px-4 py-2 flex items-center gap-2 text-orange-700 font-bold text-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                ТЕСТ НЕ ПРОЙДЕН
+                            </div>
+                            
+                            <div class="p-4 space-y-4">
+                                <div x-show="failedTest?.input && failedTest.input !== ''">
+                                    <div class="text-xs text-slate-400 uppercase font-bold mb-1">Ввод:</div>
+                                    <pre class="bg-white/50 p-2 rounded border border-orange-100 font-mono text-sm" x-text="failedTest.input"></pre>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-xs text-slate-400 uppercase font-bold mb-1">Ожидалось:</div>
+                                        <pre class="bg-green-50/50 p-2 rounded border border-green-100 font-mono text-sm text-green-700 whitespace-pre-wrap" x-text="failedTest?.expected"></pre>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-slate-400 uppercase font-bold mb-1">Ваш вывод:</div>
+                                        <pre class="bg-red-50/50 p-2 rounded border border-red-100 font-mono text-sm text-red-700 whitespace-pre-wrap" x-text="failedTest?.got"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </template>
             </div>
@@ -213,6 +262,8 @@ function levelApp() {
         selectedOptions: [], 
         gapAnswers: [],      
         codeAnswer: '',
+        codeError: '',
+        failedTest: null,
 
         async init() {
             if (!this.token || !this.levelId) { window.location.href = '/track/'; return; }
@@ -252,6 +303,8 @@ function levelApp() {
             this.selectedOptions = [];
             this.gapAnswers = [];
             this.codeAnswer = '';
+            this.codeError = '';
+            this.failedTest = null;
 
             if (this.currentTask.task_type === 'gap' && this.currentTask.gaps?.[0]) {
                 const parts = this.currentTask.gaps[0].template.split(/(%g)/g);
@@ -296,11 +349,18 @@ function levelApp() {
                 const result = await res.json();
                 
                 if (result.is_correct) {
+                    this.codeError = '';
+                    this.failedTest = null;
                     if (this.isLastTask) await this.completeLevel();
                     else { this.currentTaskIndex++; this.prepareCurrentTask(); }
                 } else {
                     this.isWrong = true;
-                    setTimeout(() => { this.isWrong = false; }, 2000);
+                    this.shouldShake = true;
+
+                    this.codeError = result.traceback || 'Execution error';
+                    this.failedTest = result.failed_test || null;
+
+                    setTimeout(() => { this.shouldShake = false; }, 500);
                 }
             } catch (e) { alert('Ошибка сервера'); }
             finally { this.isLoading = false; }
