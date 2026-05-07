@@ -38,7 +38,9 @@
                     </div>
                     
                     <div class="w-20 h-20 shrink-0 flex items-center justify-center overflow-hidden p-2">
-                        <img src="/public/course-icon.svg" :alt="course.title" class="w-full h-auto transform group-hover:scale-110 transition-transform">
+                        <img :src="course.course_icon ? course.course_icon : '/public/course-icon.svg'" 
+                            :alt="course.title" 
+                            class="w-full h-auto transform group-hover:scale-110 transition-transform">
                     </div>
                 </div>
             </template>
