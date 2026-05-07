@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль | CodeLingo</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+<div x-data="profileApp()" class="pb-24" x-cloak>
+    
+    <header class="max-w-2xl mx-auto px-6 pt-8 flex justify-end">
+        <button @click="goToSetting" class="p-2 hover:bg-slate-200 rounded-full transition text-slate-400">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <circle cx="12" cy="12" r="3" stroke-width="2"/>
+            </svg>
+        </button>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-6">
+        <div class="flex flex-col items-center mb-10">
+            <div class="w-32 h-32 rounded-full bg-slate-200 border-4 border-white shadow-sm overflow-hidden mb-4">
+                <template x-if="user.picture_link">
+                    <img :src="user.picture_link" alt="Profile" referrerpolicy="no-referrer" class="w-full h-full object-cover">
+                </template>
+                <template x-if="!user.picture_link">
+                    <div class="w-full h-full flex items-center justify-center text-slate-400">
+                        <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                    </div>
+                </template>
+            </div>
+            <h1 class="text-2xl font-bold" x-text="user.username">Загрузка...</h1>
+            <p class="text-slate-400 text-sm" x-text="user.email"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-12">
+            <div class="stat-card bg-white p-6 rounded-3xl border-2 border-slate-100 flex flex-col items-center text-center">
+                <div class="mb-2">
+                    <img src="/src/assets/streak_icon.svg" alt="streak">
+                </div>
+                <div class="text-2xl font-black text-slate-700" x-text="user.streak">0</div>
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">Серия</div>
+            </div>
+
+            <div class="stat-card bg-white p-6 rounded-3xl border-2 border-slate-100 flex flex-col items-center text-center">
+                <div class="mb-2 text-yellow-400">
+                    <img src="/src/assets/xp_icon.svg">
+                </div>
+                <div class="text-2xl font-black text-slate-700" x-text="user.xp">0</div>
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">Очки XP</div>
+            </div>
+        </div>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">Мои курсы</h2>
+            <div class="space-y-4">
+                <template x-for="course in courses" :key="course.id">
+                    <div class="bg-white p-4 rounded-3xl border-2 border-slate-100 flex items-center justify-between hover:border-[#C77DFF] transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center">
+                                <img :src="getIcon(course.course_name)" class="w-10 h-10 group-hover:scale-110 transition-transform">
+                            </div>
+                            <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-lg" x-text="course.course_name"></h3>
+                            <template x-if="course.is_complete">
+                                <span class="bg-green-100 text-green-600 text-[10px] uppercase px-2 py-0.5 rounded-full font-black">Пройден</span>
+                            </template>
+                        </div>
+                        <p class="text-slate-400 text-sm" x-text="course.progress + '% прогресс'"></p>
+                    </div>
+                </div>
+                <div class="pr-4">
+                
+                    <!-- <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg> -->
+                </div>
+            </div>
+            </template>
+
+            <template x-if="courses.length === 0">
+                <div class="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
+                    Вы еще не начали ни одного курса
+                </div>
+            </template>
+
+            </div>
+        </section>
+    </main>
+
+     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-2xl flex justify-around items-center">
+            <a href="/achievments/" class="p-2"><img src="/src/assets/achiev-icon.svg" class="h-8 w-8 grayscale hover:grayscale-0"></a>
+            <a href="/track/" class="p-2"><img src="/src/assets/book-icon.svg" class="h-8 w-8 grayscale hover:grayscale-0"></a>
+            <a href="/profile/" class="p-2 bg-purple-200 rounded-full"><img src="/src/assets/robot-icon.svg" class="h-8 w-8"></a>
+        </nav>
+</div>
+
+<script>
+function profileApp() {
+    return {
+        token: localStorage.getItem('token'),
+        baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
+        user: {
+            username: '',
+            email: '',
+            xp: 0,
+            streak: 0,
+            picture_link: null
+        },
+        courses: [],
+
+        getIcon(name) {
+            const icons = {
+                'JavaScript': 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg',
+                'Python': 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg',
+                'PHP': 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg'
+            };
+            return icons[name] || 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg';
+        },
+
+        async init() {
+            if (!this.token) {
+                window.location.href = '/auth/';
+                return;
+            }
+            await Promise.all([
+                this.fetchProfile(), this.fetchCourseStats()
+            ]);
+        },
+
+        async fetchProfile() {
+            try {
+                const res = await fetch(`${this.baseUrl}/api/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    this.user = await res.json();
+                    localStorage.setItem('user_cache', JSON.stringify(this.user));
+                } else if (res.status === 401) {
+                    this.logout();
+                }
+            } catch (e) {
+                console.error("Profile error:", e);
+            }
+        },
+
+        async fetchCourseStats() {
+            try {
+                const res = await fetch(`${this.baseUrl}/api/users/course-stat`, {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    this.courses = await res.json();
+                }
+            } catch (e) {
+                console.error("Course stats error:", e);
+            }
+        },
+
+        goToSetting() {
+            window.location.href = '/profile-settings/';
+        }
+    }
+}
+</script>
+</body>
+</html>

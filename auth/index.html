@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация | CodeLingo</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes pulse { 50% { opacity: .5; } }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .code-input:focus { border-color: #c084fc; box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.2); }
+    </style>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen font-sans antialiased text-gray-700">
+
+    <div x-data="authApp()" class="w-full max-w-md p-6" x-cloak>
+        <div x-show="toast.show" 
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="-translate-y-full opacity-0"
+            x-transition:enter-end="translate-y-0 opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="translate-y-0 opacity-100"
+            x-transition:leave-end="-translate-y-full opacity-0"
+            class="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+            x-cloak>
+            <div :class="toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'" 
+                class="text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center justify-center space-x-3">
+                <template x-if="toast.type === 'success'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </template>
+                <span class="font-bold tracking-wide" x-text="toast.message"></span>
+            </div>
+        </div>
+
+        
+        <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 md:p-12">
+            
+            <h1 class="text-2xl font-bold text-center tracking-wide uppercase mb-6" 
+                x-text="getLabel().title"></h1>
+
+            <div class="flex justify-center mb-8">
+                <img :src="mode === 'forgot' ? '/src/assets/avatar-thinking.svg' : '/src/assets/robot.svg'" 
+                     alt="Robot" class="h-40 w-auto transition-all">
+            </div>
+
+            <div class="space-y-4">
+                
+                <!-- Регистрация: Имя -->
+                <template x-if="mode === 'register'">
+                    <div class="relative">
+                        <input type="text" x-model="formData.username" placeholder="Имя"
+                            class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
+                    </div>
+                </template>
+
+                <!-- Вход / Регистрация / Забыли (Почта) -->
+                <!-- Скрываем почту только на шаге ввода кода и нового пароля в режиме восстановления, 
+                     но она нам нужна в formData для запросов -->
+                <template x-if="mode !== 'forgot' || (mode === 'forgot' && step === 1)">
+                    <div class="relative">
+                        <input type="email" x-model="formData.email" placeholder="Почта"
+                            class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
+                    </div>
+                </template>
+
+                <!-- Вход / Регистрация (Пароль) -->
+                <template x-if="mode === 'login' || mode === 'register'">
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" x-model="formData.password" placeholder="Пароль"
+                            class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
+                        <button @click="showPassword = !showPassword" class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-500">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </template>
+
+                <!-- Восстановление: Шаг 2 (Код) -->
+                <template x-if="mode === 'forgot' && step === 2">
+                    <div>
+                        <p class="text-center text-sm text-gray-400 mb-4">Код отправлен на <span class="text-gray-600 font-bold" x-text="formData.email"></span></p>
+                        <div class="flex justify-between gap-2 py-2" @paste="handlePaste($event)">
+                            <template x-for="i in 6" :key="i">
+                                <input type="text" maxlength="1" 
+                                    :id="'code-' + i"
+                                    @input="handleCodeInput($event, i)"
+                                    @keydown.backspace="handleBackspace($event, i)"
+                                    class="w-12 h-14 text-center text-xl font-black border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 transition-all">
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Восстановление: Шаг 3 (Новый пароль) -->
+                <template x-if="mode === 'forgot' && step === 3">
+                    <div class="space-y-4">
+                        <p class="text-center text-sm text-gray-400">Код подтвержден! Придумайте новый пароль.</p>
+                        <input type="password" x-model="formData.new_password" placeholder="Новый пароль"
+                            class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all font-medium">
+                    </div>
+                </template>
+
+                <!-- Забыли пароль? -->
+                <template x-if="mode === 'login'">
+                    <div class="text-right">
+                        <button @click="mode = 'forgot'; step = 1" class="text-sm font-bold text-gray-400 hover:text-purple-500 transition-colors">
+                            Забыли пароль?
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <div x-show="errorMessage" x-text="errorMessage" class="mt-4 text-red-500 text-sm text-center font-medium"></div>
+
+            <button @click="submitForm()" 
+                :disabled="isLoading"
+                class="w-full mt-8 bg-[#c084fc] hover:bg-[#b060ff] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-100 transition-all transform active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest">
+                <span x-show="!isLoading" x-text="getLabel().button"></span>
+                <span x-show="isLoading" class="animate-pulse">Загрузка...</span>
+            </button>
+
+            <div class="mt-6 text-center">
+                <button @click="toggleMode()" class="text-sm font-semibold text-gray-600 hover:text-purple-600 transition-colors tracking-tight">
+                    <span x-text="getLabel().switch"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function authApp() {
+            return {
+                mode: 'login',
+                step: 1, 
+                showPassword: false,
+                isLoading: false,
+                errorMessage: '',
+                baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
+                formData: {
+                    username: '',
+                    email: '',
+                    password: '',
+                    code: '',
+                    new_password: ''
+                },
+
+                toast: { show: false, message: '', type: 'success' },
+
+                showToast(msg, type = 'success') {
+                    this.toast.message = msg;
+                    this.toast.type = type;
+                    this.toast.show = true;
+                    setTimeout(() => { this.toast.show = false; }, 3000);
+                },
+
+                // Вспомогательный метод для проверки email
+                isValidEmail(email) {
+                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                },
+
+                // Основная логика валидации перед отправкой
+                validate() {
+                    this.errorMessage = '';
+                    
+                    // Валидация почты (кроме шагов 2 и 3 восстановления, где поле скрыто)
+                    if (this.mode !== 'forgot' || (this.mode === 'forgot' && this.step === 1)) {
+                        if (!this.formData.email.trim()) {
+                            this.errorMessage = 'Введите адрес почты';
+                            return false;
+                        }
+                        if (!this.isValidEmail(this.formData.email)) {
+                            this.errorMessage = 'Введите корректную почту';
+                            return false;
+                        }
+                    }
+
+                    // Валидация логина/регистрации
+                    if (this.mode === 'login' || this.mode === 'register') {
+                        if (this.mode === 'register' && !this.formData.username.trim()) {
+                            this.errorMessage = 'Введите ваше имя';
+                            return false;
+                        }
+                        if (!this.formData.password) {
+                            this.errorMessage = 'Введите пароль';
+                            return false;
+                        }
+                        if (this.formData.password.length < 5) {
+                            this.errorMessage = 'Пароль должен быть не менее 5 символов';
+                            return false;
+                        }
+                    }
+
+                    // Валидация шагов восстановления
+                    if (this.mode === 'forgot') {
+                        if (this.step === 2 && this.formData.code.length < 6) {
+                            this.errorMessage = 'Введите полный код (6 цифр)';
+                            return false;
+                        }
+                        if (this.step === 3) {
+                            if (!this.formData.new_password) {
+                                this.errorMessage = 'Введите новый пароль';
+                                return false;
+                            }
+                            if (this.formData.new_password.length < 6) {
+                                this.errorMessage = 'Минимум 6 символов для пароля';
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                },
+
+                getLabel() {
+                    if (this.mode === 'login') return { title: 'Авторизация', button: 'Войти', switch: 'Еще нет аккаунта? Зарегистрироваться' };
+                    if (this.mode === 'register') return { title: 'Регистрация', button: 'Зарегистрироваться', switch: 'Уже есть аккаунт? Войти' };
+                    if (this.mode === 'forgot') {
+                        if (this.step === 1) return { title: 'Восстановление', button: 'Получить код', switch: 'Вернуться назад' };
+                        if (this.step === 2) return { title: 'Ввод кода', button: 'Подтвердить', switch: 'Изменить почту' };
+                        if (this.step === 3) return { title: 'Новый пароль', button: 'Сбросить пароль', switch: 'Отмена' };
+                    }
+                },
+
+                toggleMode() {
+                    this.errorMessage = '';
+                    if (this.mode === 'forgot') {
+                        this.mode = 'login';
+                        this.step = 1;
+                    } else {
+                        this.mode = this.mode === 'login' ? 'register' : 'login';
+                    }
+                },
+
+                handleCodeInput(e, index) {
+                    const val = e.target.value;
+                    if (val && index < 6) {
+                        document.getElementById(`code-${index + 1}`).focus();
+                    }
+                    this.syncCode();
+                },
+
+                handleBackspace(e, index) {
+                    if (!e.target.value && index > 1) {
+                        document.getElementById(`code-${index - 1}`).focus();
+                    }
+                },
+
+                handlePaste(e) {
+                    const data = e.clipboardData.getData('text').slice(0, 6).split('');
+                    data.forEach((char, i) => {
+                        const input = document.getElementById(`code-${i + 1}`);
+                        if (input) input.value = char;
+                    });
+                    this.syncCode();
+                },
+
+                syncCode() {
+                    const inputs = Array.from(document.querySelectorAll('[id^="code-"]'));
+                    this.formData.code = inputs.map(i => i.value).join('');
+                    
+                    // Авто-отправка если введено 6 символов
+                    if (this.formData.code.length === 6) {
+                        this.submitForm();
+                    }
+                },
+
+                async apiRequest(endpoint, body) {
+                    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.detail || 'Произошла ошибка');
+                    }
+                    return response;
+                },
+
+                async submitForm() {
+                    if (this.isLoading) return;
+
+                    if (!this.validate()) return;
+
+                    this.isLoading = true;
+                    this.errorMessage = '';
+
+                    try {
+                        // 1. ЛОГИН
+                        if (this.mode === 'login') {
+                            const res = await this.apiRequest('/api/auth/login', {
+                                email: this.formData.email,
+                                password: this.formData.password
+                            });
+                            const data = await res.json();
+                            localStorage.setItem('token', data.access_token);
+                            this.showToast('С возвращением!');
+                            window.location.href = '/track/';
+                        } 
+                        
+                        // 2. РЕГИСТРАЦИЯ
+                        else if (this.mode === 'register') {
+                            await this.apiRequest('/api/auth/register', this.formData);
+                            this.showToast('Аккаунт создан!');
+                            this.mode = 'login'; // После регистрации отправляем логиниться
+                        }
+
+                        // 3. ВОССТАНОВЛЕНИЕ (3 ШАГА)
+                        else if (this.mode === 'forgot') {
+                            if (this.step === 1) {
+                                await this.apiRequest('/api/auth/forgot-password', { email: this.formData.email });
+                                this.showToast('Код отправлен на почту');
+                                this.step = 2;
+                            } 
+                            else if (this.step === 2) {
+                                await this.apiRequest('/api/auth/verify-code', { 
+                                    email: this.formData.email, 
+                                    code: this.formData.code 
+                                });
+                                this.showToast('Код подтвержден');
+                                this.step = 3;
+                            } 
+                            else if (this.step === 3) {
+                                await this.apiRequest('/api/auth/reset-password', {
+                                    email: this.formData.email,
+                                    code: this.formData.code,
+                                    new_password: this.formData.new_password
+                                });
+                                // Успех! Возвращаем на вход
+                                this.showToast('Пароль успешно изменен!');
+                                this.mode = 'login';
+                                this.step = 1;
+                            }
+                        }
+                    } catch (err) {
+                        this.errorMessage = err.message;
+                    } finally {
+                        this.isLoading = false; 
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Достижения | CodeLingo</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .achievement-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .achievement-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-white text-slate-800 font-sans min-h-screen">
+
+<div x-data="achievementsApp()" class="max-w-2xl mx-auto px-6 py-10 pb-32" x-cloak>
+    
+    <!-- Заголовок -->
+    <header class="text-center mb-12">
+        <h1 class="text-3xl font-black text-slate-700">Достижения</h1>
+    </header>
+
+    <main class="space-y-10">
+        
+        <!-- Секция: Полученные достижения -->
+        <section class="space-y-4">
+            <template x-for="item in receivedList" :key="item.id">
+                <div class="achievement-card flex items-center p-5 bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-sm">
+                    <div class="w-20 h-20 flex-shrink-0 mr-6">
+                        <img :src="item.icon" :alt="item.title" class="w-full h-full object-contain">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-700" x-text="item.title"></h3>
+                        <p class="text-slate-400 font-medium" x-text="item.description"></p>
+                    </div>
+                </div>
+            </template>
+        </section>
+
+        <!-- Секция: Доступные (еще не полученные) -->
+        <section class="space-y-4">
+            <h2 class="text-xl font-black text-slate-500 uppercase tracking-widest ml-4 mb-6">Доступные:</h2>
+            
+            <template x-for="item in availableList" :key="item.id">
+                <div class="achievement-card flex items-center p-5 bg-slate-50/50 border-2 border-slate-100 rounded-[2.5rem] opacity-70">
+                    <div class="w-20 h-20 flex-shrink-0 mr-6 grayscale opacity-60">
+                        <img :src="item.icon" :alt="item.title" class="w-full h-full object-contain">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-500" x-text="item.title"></h3>
+                        <p class="text-slate-400 font-medium" x-text="item.description"></p>
+                    </div>
+                </div>
+            </template>
+        </section>
+
+        <!-- Заглушка при отсутствии данных -->
+        <template x-if="achievements.length === 0 && !loading">
+            <div class="text-center py-20">
+                <p class="text-slate-400 text-lg">Достижений пока нет. Продолжайте учиться!</p>
+            </div>
+        </template>
+    </main>
+
+    <!-- Нижняя навигация -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-2xl flex justify-around items-center">
+        <a href="#" class="p-2 bg-purple-200 rounded-full"><img src="/src/assets/achiev-icon.svg" class="h-8 w-8"></a>
+        <a href="/track/" class="p-2"><img src="/src/assets/book-icon.svg" class="h-8 w-8 grayscale hover:grayscale-0"></a>
+        <a href="/profile/" class="p-2"><img src="/src/assets/robot-icon.svg" class="h-8 w-8 grayscale hover:grayscale-0"></a>
+    </nav>
+</div>
+
+<script>
+function achievementsApp() {
+    return {
+        achievements: [],
+        loading: true,
+        token: localStorage.getItem('token'),
+        baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
+
+        async init() {
+            if (!this.token) {
+                window.location.href = '/auth/';
+                return;
+            }
+            await this.fetchAchievements();
+        },
+
+        async fetchAchievements() {
+            this.loading = true;
+            try {
+                const res = await fetch(`${this.baseUrl}/api/achievments/my`, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+                if (res.ok) {
+                    this.achievements = await res.json();
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки достижений:", e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // Геттер для полученных достижений
+        get receivedList() {
+            return this.achievements.filter(a => a.received);
+        },
+
+        // Геттер для еще не полученных достижений
+        get availableList() {
+            return this.achievements.filter(a => !a.received);
+        }
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная</title>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen font-sans antialiased text-gray-700">
+
+    <div class="w-full max-w-sm p-6 text-center">
+        <div class="flex justify-center mb-8">
+            <img src="/src/assets/robot.svg" alt="Robot" class="h-32 w-auto">
+        </div>
+        
+        <h1 class="text-2xl font-bold mb-10 uppercase tracking-widest">Добро пожаловать</h1>
+
+        <div class="space-y-4">
+            <a href="/auth/?mode=login" 
+               class="block w-full bg-[#c084fc] hover:bg-[#b060ff] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-200 transition-all transform active:scale-[0.98] text-center uppercase tracking-widest">
+                Войти
+            </a> 
+
+            <a href="/auth/?mode=register" 
+               class="block w-full bg-white border-2 border-[#c084fc] text-[#c084fc] hover:bg-purple-50 font-bold py-4 rounded-2xl transition-all transform active:scale-[0.98] text-center uppercase tracking-widest">
+                Регистрация
+            </a>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

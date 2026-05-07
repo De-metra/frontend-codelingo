@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Уровень</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+        .animate-popIn { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+    </style>
+</head>
+<body>
+    <div x-data="levelApp()" class="min-h-screen bg-white font-sans text-slate-800 pb-64">
+    
+    <!-- Header (Progress Bar) -->
+    <div class="fixed top-0 inset-x-0 bg-white z-40">
+        <div class="max-w-2xl mx-auto px-4 h-16 flex items-center gap-4">
+            <button @click="showExitModal = true" class="p-2 hover:bg-slate-100 rounded-full transition">
+                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <div class="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-[#C77DFF] transition-all duration-500" :style="`width: ${progress}%`"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-2xl mx-auto pt-20 px-6">
+        <!-- Theory Step -->
+        <template x-if="step === 'theory'">
+            <div class="animate-fadeIn bg-white rounded-2xl p-6 shadow-sm">
+                <div class="prose prose-purple max-w-none text-gray-800" x-html="renderedContent"></div>
+            </div>
+        </template>
+
+        <!-- Task Step -->
+        <template x-if="step === 'task' && currentTask">
+            <div class="animate-fadeIn">
+                <h2 class="text-2xl font-bold mb-2" x-text="currentTask.title"></h2>
+                <p class="text-slate-500 mb-8 whitespace-pre-line" x-text="currentTask.description"></p>
+
+                <!-- Task Type: Choice -->
+                <template x-if="currentTask.task_type === 'choice'">
+                    <div class="space-y-3">
+                        <template x-for="option in currentTask.options" :key="option.id">
+                            <button @click="toggleChoice(option.id)"
+                                :class="selectedOptions.includes(option.id) ? 'border-[#C77DFF] bg-[#F3E8FF]' : 'border-slate-200 hover:border-slate-300'"
+                                class="w-full p-4 flex items-center gap-3 border-2 rounded-2xl transition-all text-left">
+                                <div :class="selectedOptions.includes(option.id) ? 'bg-[#C77DFF] border-[#C77DFF]' : 'border-slate-300'" 
+                                     class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors">
+                                    <svg x-show="selectedOptions.includes(option.id)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                </div>
+                                <span class="font-medium" x-text="option.text"></span>
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Task Type: Gap -->
+                <template x-if="currentTask.task_type === 'gap'">
+                    <div class="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 leading-loose text-lg">
+                        <template x-for="(part, index) in currentTask.gapParts">
+                            <span class="inline-flex items-baseline">
+                                <span x-text="part.text"></span>
+                                <template x-if="part.isInput">
+                                    <input type="text" x-model="gapAnswers[part.inputIndex]"
+                                        class="mx-2 px-2 py-0.5 border-b-2 border-[#C77DFF] bg-transparent focus:outline-none min-w-[80px] text-center font-mono text-[#C77DFF]"
+                                        :style="`width: ${(gapAnswers[part.inputIndex]?.length || 3) + 1}ch`"
+                                    >
+                                </template>
+                            </span>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Task Type: Code -->
+                <template x-if="currentTask.task_type === 'code'">
+                    <div class="space-y-4">
+                        <div class="bg-[#1E1E1E] rounded-2xl p-4 shadow-xl">
+                            <div class="flex items-center gap-2 mb-3 px-1">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-slate-500 text-xs ml-2 font-mono" x-text="currentTask.code[0].language"></span>
+                            </div>
+                            <textarea x-model="codeAnswer" class="w-full h-64 bg-transparent text-slate-200 font-mono focus:outline-none resize-none" spellcheck="false"></textarea>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Final Results Step -->
+        <template x-if="step === 'complete'">
+            <div class="flex flex-col items-center justify-center min-h-[70vh] text-center animate-fadeIn">
+                <div class="relative mb-8 animate-float">
+                    <img src="/src/assets/cat.svg" alt="Mascot" class="w-48 h-48 mx-auto">
+                </div>
+                <h1 class="text-4xl font-black text-[#C77DFF] mb-8 uppercase tracking-tight animate-popIn">Урок пройден!</h1>
+                <div class="animate-popIn delay-100">
+                    <div class="inline-block bg-white border-2 border-[#C77DFF] rounded-3xl overflow-hidden shadow-lg">
+                        <div class="bg-[#C77DFF] text-white text-xs font-bold py-1 px-8 uppercase tracking-widest">XP</div>
+                        <div class="py-4 px-10 flex items-center justify-center gap-2">
+                            <svg class="w-6 h-6 text-yellow-400 fill-current" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                            <span class="text-3xl font-black text-slate-700" x-text="results.xp_added"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-6 text-slate-400 font-medium animate-fadeIn delay-200">
+                    Ваш ударный режим: <span class="text-orange-500 font-bold" x-text="results.streak"></span> дн.
+                </p>
+            </div>
+        </template>
+    </main>
+
+    <!-- Footer Action Bar -->
+    <div class="fixed bottom-0 inset-x-0 p-6 bg-white border-t border-slate-100 z-40">
+        <div class="max-w-2xl mx-auto">
+            <template x-if="step === 'complete'">
+                <button @click="window.location.href='/track/'" class="w-full py-4 bg-[#C77DFF] hover:bg-[#B366FF] text-white font-bold rounded-2xl shadow-[0_4px_0_0_#AA55FF] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider">Отлично!</button>
+            </template>
+            <template x-if="step !== 'complete'">
+                <button @click="handleMainAction()" :disabled="isLoading"
+                    :class="isWrong ? 'bg-[#F35D61] shadow-[0_4px_0_0_#D1484C] hover:bg-[#ff6b6f]' : 'bg-[#C77DFF] shadow-[0_4px_0_0_#AA55FF] hover:bg-[#B366FF]'"
+                    class="w-full py-4 disabled:opacity-50 text-white font-bold rounded-2xl active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
+                    x-text="isWrong ? 'Попробовать снова' : (step === 'theory' ? 'Далее' : (isLastTask ? 'Завершить' : 'Проверить'))">
+                </button>
+            </template>
+        </div>
+    </div>
+
+    <!-- Achievement Modal -->
+    <div x-show="showAchievementsModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-purple-900/40 backdrop-blur-md" x-cloak x-transition>
+        <div class="bg-white rounded-[2.5rem] p-8 max-w-md w-full text-center shadow-2xl animate-popIn border-4 border-[#C77DFF]/20">
+            <div class="mb-4 inline-flex items-center justify-center w-20 h-20 bg-yellow-100 rounded-full text-yellow-500">
+                <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            </div>
+            
+            <h2 class="text-3xl font-black text-slate-800 mb-2 uppercase tracking-tight">Новое достижение!</h2>
+            <p class="text-slate-500 mb-8 font-medium">Вы только что получили новые награды за свои успехи!</p>
+
+            <div class="space-y-4 mb-8 max-h-60 overflow-y-auto px-2">
+                <template x-for="ach in newAchievements" :key="ach.id">
+                    <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-slate-100 animate-fadeIn">
+                        <div class="w-16 h-16 flex-shrink-0 bg-white rounded-xl shadow-sm p-2">
+                            <img :src="ach.icon" class="w-full h-full object-contain">
+                        </div>
+                        <div class="text-left">
+                            <h4 class="font-bold text-slate-800 text-lg" x-text="ach.title"></h4>
+                            <p class="text-xs text-[#C77DFF] font-bold uppercase tracking-widest">Разблокировано</p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <button @click="showAchievementsModal = false" class="w-full py-4 bg-[#C77DFF] text-white font-bold rounded-2xl shadow-[0_4px_0_0_#AA55FF] hover:bg-[#B366FF] transition-all uppercase tracking-wider">
+                Продолжить
+            </button>
+        </div>
+    </div>
+
+    <!-- Exit Confirmation Modal -->
+    <div x-show="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" x-cloak>
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-popIn">
+            <h3 class="text-2xl font-bold mb-2">Уже уходишь?</h3>
+            <p class="text-slate-500 mb-8">Весь прогресс в этом уроке будет потерян.</p>
+            <div class="space-y-3">
+                <button @click="window.location.href='/track/'" class="w-full py-4 bg-red-500 text-white font-bold rounded-2xl shadow-[0_4px_0_0_#DC2626]">Выйти</button>
+                <button @click="showExitModal = false" class="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl">Остаться</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function levelApp() {
+    return {
+        token: localStorage.getItem('token'),
+        baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
+        levelId: new URLSearchParams(window.location.search).get('id')?.replace(/\//g, '').trim(),
+        
+        step: 'theory',
+        tasks: [],
+        currentTaskIndex: 0,
+        renderedContent: '',
+        isLoading: false,
+        isWrong: false,
+        progress: 5,
+        showExitModal: false,
+        
+        // Achievement states
+        newAchievements: [],
+        showAchievementsModal: false,
+
+        results: { xp_added: 0, streak: 0 },
+        selectedOptions: [], 
+        gapAnswers: [],      
+        codeAnswer: '',
+
+        async init() {
+            if (!this.token || !this.levelId) { window.location.href = '/track/'; return; }
+            await Promise.all([this.loadTheory(), this.loadTasks()]);
+        },
+
+        async apiFetch(endpoint, options = {}) {
+            return fetch(`${this.baseUrl}${endpoint}`, {
+                ...options,
+                headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json', ...options.headers }
+            });
+        },
+
+        async loadTheory() {
+            try {
+                const res = await this.apiFetch(`/api/levels/${this.levelId}/theory`);
+                const data = await res.json();
+                this.renderedContent = marked.parse(data.theory || '');
+            } catch (e) { console.error(e); }
+        },
+
+        async loadTasks() {
+            try {
+                const res = await this.apiFetch(`/api/levels/${this.levelId}/tasks`);
+                const data = await res.json();
+                this.tasks = data.sort((a, b) => a.num_in_order - b.num_in_order);
+                this.prepareCurrentTask();
+            } catch (e) { console.error(e); }
+        },
+
+        get currentTask() { return this.tasks[this.currentTaskIndex] || null; },
+        get isLastTask() { return this.tasks.length > 0 && this.currentTaskIndex === this.tasks.length - 1; },
+
+        prepareCurrentTask() {
+            if (!this.currentTask) return;
+            this.isWrong = false;
+            this.selectedOptions = [];
+            this.gapAnswers = [];
+            this.codeAnswer = '';
+
+            if (this.currentTask.task_type === 'gap' && this.currentTask.gaps?.[0]) {
+                const parts = this.currentTask.gaps[0].template.split(/(%g)/g);
+                let inputIdx = 0;
+                this.currentTask.gapParts = parts.map(p => p === '%g' ? { isInput: true, inputIndex: inputIdx++ } : { isInput: false, text: p });
+                this.gapAnswers = new Array(inputIdx).fill('');
+            }
+            if (this.currentTask.task_type === 'code' && this.currentTask.code?.[0]) {
+                this.codeAnswer = this.currentTask.code[0].template;
+            }
+            this.updateProgress();
+        },
+
+        updateProgress() {
+            const total = this.tasks.length + 1;
+            const current = this.step === 'theory' ? 1 : this.currentTaskIndex + 2;
+            this.progress = Math.min((current / total) * 100, 100);
+        },
+
+        toggleChoice(id) {
+            this.isWrong = false;
+            this.selectedOptions.includes(id) ? this.selectedOptions = this.selectedOptions.filter(i => i !== id) : this.selectedOptions.push(id);
+        },
+
+        async handleMainAction() {
+            if (this.step === 'theory') {
+                if (this.tasks.length === 0) { window.location.href = '/track/'; return; }
+                this.step = 'task'; this.prepareCurrentTask(); return;
+            }
+            await this.submitTask();
+        },
+
+        async submitTask() {
+            if (this.isLoading) return;
+            this.isLoading = true;
+            let answers = this.currentTask.task_type === 'choice' ? this.selectedOptions : (this.currentTask.task_type === 'gap' ? this.gapAnswers : this.codeAnswer);
+
+            try {
+                const res = await this.apiFetch(`/api/tasks/${this.currentTask.id}/submit`, {
+                    method: 'POST', body: JSON.stringify({ answers })
+                });
+                const result = await res.json();
+                
+                if (result.is_correct) {
+                    if (this.isLastTask) await this.completeLevel();
+                    else { this.currentTaskIndex++; this.prepareCurrentTask(); }
+                } else {
+                    this.isWrong = true;
+                    setTimeout(() => { this.isWrong = false; }, 2000);
+                }
+            } catch (e) { alert('Ошибка сервера'); }
+            finally { this.isLoading = false; }
+        },
+
+        async completeLevel() {
+            try {
+                const res = await this.apiFetch(`/api/levels/${this.levelId}/complete`, { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.results = data;
+                    
+                    // Логика достижений
+                    if (data.new_achievments && data.new_achievments.length > 0) {
+                        this.newAchievements = data.new_achievments;
+                        this.showAchievementsModal = true;
+                    }
+
+                    this.step = 'complete';
+                    this.progress = 100;
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+}
+</script>
+</body>
+</html>

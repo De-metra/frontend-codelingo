@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки аккаунта | CodeLingo</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        /* Плавные переходы для инпутов */
+        input, button { transition: all 0.2s ease-in-out; }
+        /* Стиль "выдавленной" кнопки для сохранения */
+        .btn-shadow { box-shadow: 0 4px 0 #A568CC; }
+        .btn-shadow:active { box-shadow: 0 0px 0 #A568CC; transform: translateY(4px); }
+    </style>
+</head>
+<body class="bg-white text-slate-700 font-sans antialiased">
+
+<div x-data="settingsApp()" class="min-h-screen max-w-3xl mx-auto px-6 py-10" x-cloak>
+    
+    <!-- Header -->
+    <header class="flex items-center mb-16">
+        <button @click="window.location.href = '/profile/'" class="p-2 -ml-4 text-slate-300 hover:text-slate-500 transition">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <h1 class="flex-grow text-center text-2xl font-black text-slate-600 mr-8">Аккаунт</h1>
+    </header>
+
+    <main class="space-y-8 flex-grow">
+        <!-- Сетка настроек: Слева текст, справа контрол -->
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 items-center">
+            <label class="text-lg font-bold text-slate-500">Фото</label>
+            <label class="relative block cursor-pointer">
+                <div class="w-full bg-white border-2 border-[#C77DFF] text-[#C77DFF] rounded-2xl py-3 px-6 text-center font-bold text-lg hover:bg-purple-50">
+                    <span x-text="avatarFile ? 'Файл: ' + avatarFile.name : 'Выбрать файл'"></span>
+                </div>
+                <input type="file" class="hidden" @change="handleFileChange($event)" accept="image/*">
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 items-center">
+            <label class="text-lg font-bold text-slate-500">Имя</label>
+            <input type="text" x-model="formData.username" 
+                   class="w-full bg-[#F3F4F6] border-2 border-transparent rounded-2xl py-3 px-6 outline-none focus:border-[#C77DFF] font-bold text-lg text-slate-700 placeholder:text-slate-400">
+        </div>
+
+        <!-- <div class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 items-center">
+            <label class="text-lg font-bold text-slate-500">Тема</label>
+            <div class="relative">
+                <select x-model="formData.theme" 
+                        class="w-full bg-[#F3F4F6] border-2 border-transparent rounded-2xl py-3 px-6 outline-none focus:border-[#C77DFF] font-bold text-lg text-slate-700 appearance-none cursor-pointer">
+                    <option value="light">Светлая</option>
+                    <option value="dark">Тёмная</option>
+                </select>
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
+        </div> -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-60 space-y-10">
+        <div class="flex flex-col items-center gap-4">
+            <button @click="modals.logout = true" class="text-slate-400 border-b-2 border-slate-200 hover:text-slate-500 transition font-black text-sm uppercase tracking-wider">
+                Выйти из аккаунта
+            </button>
+            <button @click="modals.delete = true" class="text-red-400 border-b-2 border-red-100 hover:text-red-500 transition font-black text-sm uppercase tracking-wider">
+                Удалить аккаунт
+            </button>
+        </div>
+
+        <button @click="saveChanges()" 
+                :disabled="loading"
+                class="w-full bg-[#C77DFF] text-white font-black py-4 rounded-2xl btn-shadow uppercase tracking-widest text-lg disabled:opacity-50 disabled:pointer-events-none">
+            <span x-show="!loading">Сохранить</span>
+            <span x-show="loading">Сохранение...</span>
+        </button>
+    </footer>
+
+    <!-- Модалки (без изменений логики) -->
+    <template x-if="modals.logout">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+            <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl">
+                <h3 class="text-xl font-black text-slate-700">Выйти из аккаунта?</h3>
+                <div class="flex flex-col gap-3">
+                    <button @click="confirmLogout()" class="w-full py-4 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600">Да, выйти</button>
+                    <button @click="modals.logout = false" class="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+function settingsApp() {
+    return {
+        token: localStorage.getItem('token'),
+        baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
+        loading: false,
+        avatarFile: null,
+        formData: { 
+            username: '',
+            theme: 'light' 
+        },
+        modals: { logout: false, delete: false },
+
+        async init() {
+            if (!this.token) { window.location.href = '/auth/'; return; }
+            try {
+                const res = await fetch(`${this.baseUrl}/api/users/me`, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.formData.username = data.username;
+                }
+            } catch (e) { console.error(e); }
+        },
+
+        handleFileChange(event) {
+            this.avatarFile = event.target.files[0];
+        },
+
+        async saveChanges() {
+            this.loading = true;
+            const fd = new FormData();
+            fd.append('username', this.formData.username);
+            if (this.avatarFile) fd.append('file', this.avatarFile); 
+
+            try {
+                const res = await fetch(`${this.baseUrl}/api/users/change-me/`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${this.token}` },
+                    body: fd
+                });
+
+                if (res.ok) {
+                    window.location.href = '/profile/';
+                } else {
+                    const errData = await res.json();
+                    alert(errData.detail || 'Ошибка обновления');
+                }
+            } catch (e) { console.error(e); } 
+            finally { this.loading = false; }
+        },
+
+        confirmLogout() {
+            localStorage.removeItem('token');
+            window.location.href = '/auth/';
+        }
+    }
+}
+</script>
+</body>
+</html>
