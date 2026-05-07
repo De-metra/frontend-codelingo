@@ -20,6 +20,9 @@
         .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         .delay-100 { animation-delay: 0.1s; }
         .delay-200 { animation-delay: 0.2s; }
+
+        /* Анимация только для элементов с этим классом при ошибке */
+        .shake-element { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 </head>
 <body>
@@ -48,7 +51,7 @@
 
         <!-- Task Step -->
         <template x-if="step === 'task' && currentTask">
-            <div class="animate-fadeIn" :class="{ 'animate-shake': isWrong }">
+            <div class="animate-fadeIn">
                 <h2 class="text-2xl font-bold mb-2" x-text="currentTask.title"></h2>
                 <p class="text-slate-500 mb-8 whitespace-pre-line" x-text="currentTask.description"></p>
 
@@ -57,10 +60,20 @@
                     <div class="space-y-3">
                         <template x-for="option in currentTask.options" :key="option.id">
                             <button @click="toggleChoice(option.id)"
-                                :class="selectedOptions.includes(option.id) ? 'border-[#C77DFF] bg-[#F3E8FF]' : 'border-slate-200 hover:border-slate-300'"
+                                :disabled="isChecked && !isWrong"
+                                :class="{
+                                    'border-slate-200': !selectedOptions.includes(option.id),
+                                    'border-[#C77DFF] bg-[#F3E8FF]': selectedOptions.includes(option.id) && !isChecked,
+                                    'border-red-500 bg-red-50 shake-element': isWrong && selectedOptions.includes(option.id),
+                                    'border-green-500 bg-green-50': isChecked && !isWrong && selectedOptions.includes(option.id)
+                                }"
                                 class="w-full p-4 flex items-center gap-3 border-2 rounded-2xl transition-all text-left">
-                                <div :class="selectedOptions.includes(option.id) ? 'bg-[#C77DFF] border-[#C77DFF]' : 'border-slate-300'" 
-                                     class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors">
+                                <div :class="{
+                                    'bg-[#C77DFF] border-[#C77DFF]': selectedOptions.includes(option.id) && !isChecked,
+                                    'bg-red-500 border-red-500': isWrong && selectedOptions.includes(option.id),
+                                    'bg-green-500 border-green-500': isChecked && !isWrong && selectedOptions.includes(option.id),
+                                    'border-slate-300': !selectedOptions.includes(option.id)
+                                }" class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors">
                                     <svg x-show="selectedOptions.includes(option.id)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                                 </div>
                                 <span class="font-medium" x-text="option.text"></span>
@@ -71,17 +84,27 @@
 
                 <!-- Task Type: Gap -->
                 <template x-if="currentTask.task_type === 'gap'">
-                    <div class="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 leading-loose text-lg">
-                        <template x-for="(part, index) in currentTask.gapParts">
-                            <span class="inline-flex items-baseline">
-                                <span x-text="part.text"></span>
-                                <template x-if="part.isInput">
-                                    <input type="text" x-model="gapAnswers[part.inputIndex]"
-                                        class="mx-2 px-2 py-0.5 border-b-2 border-[#C77DFF] bg-transparent focus:outline-none min-w-[80px] text-center font-mono text-[#C77DFF]"
-                                        :style="`width: ${(gapAnswers[part.inputIndex]?.length || 3) + 1}ch`"
-                                    >
+                    <div class="space-y-4"> <template x-for="(gapRow, rowIdx) in currentTask.gapRows" :key="rowIdx">
+                            <div class="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 leading-loose text-lg">
+                                <template x-for="part in gapRow.parts">
+                                    <span class="inline-flex items-baseline">
+                                        <span x-text="part.text"></span>
+                                        <template x-if="part.isInput">
+                                            <input type="text" 
+                                                x-model="gapAnswers[part.globalIndex]"
+                                                @input="isWrong = false; isChecked = false"
+                                                :class="{
+                                                    'border-[#C77DFF] text-[#C77DFF]': !isChecked,
+                                                    'border-red-500 text-red-500 shake-element': isWrong,
+                                                    'border-green-500 text-green-500': isChecked && !isWrong
+                                                }"
+                                                class="mx-2 px-2 py-0.5 border-b-2 bg-transparent focus:outline-none min-w-[60px] text-center font-mono transition-colors"
+                                                :style="`width: ${(gapAnswers[part.globalIndex]?.length || 2) + 1}ch`"
+                                            >
+                                        </template>
+                                    </span>
                                 </template>
-                            </span>
+                            </div>
                         </template>
                     </div>
                 </template>
@@ -184,9 +207,8 @@
             <template x-if="step !== 'complete'">
                 <button @click="handleMainAction()" :disabled="isLoading"
                     :class="{ 
-                        'bg-[#F35D61] shadow-[0_4px_0_0_#D1484C] hover:bg-[#ff6b6f]': isWrong,
-                        'bg-[#C77DFF] shadow-[0_4px_0_0_#AA55FF] hover:bg-[#B366FF]': !isWrong,
-                        'animate-shake': isWrong 
+                        'bg-[#F35D61] shadow-[0_4px_0_0_#D1484C] shake-element': isWrong,
+                        'bg-[#C77DFF] shadow-[0_4px_0_0_#AA55FF]': !isWrong
                     }"
                     class="w-full py-4 disabled:opacity-50 text-white font-bold rounded-2xl active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
                     x-text="isWrong ? 'Попробовать снова' : (step === 'theory' ? 'Далее' : (isLastTask ? 'Завершить' : 'Проверить'))">
@@ -264,6 +286,7 @@ function levelApp() {
         codeAnswer: '',
         codeError: '',
         failedTest: null,
+        isChecked: false,
 
         async init() {
             if (!this.token || !this.levelId) { window.location.href = '/track/'; return; }
@@ -300,17 +323,29 @@ function levelApp() {
         prepareCurrentTask() {
             if (!this.currentTask) return;
             this.isWrong = false;
+            this.isChecked = false;
             this.selectedOptions = [];
             this.gapAnswers = [];
             this.codeAnswer = '';
             this.codeError = '';
             this.failedTest = null;
 
-            if (this.currentTask.task_type === 'gap' && this.currentTask.gaps?.[0]) {
-                const parts = this.currentTask.gaps[0].template.split(/(%g)/g);
-                let inputIdx = 0;
-                this.currentTask.gapParts = parts.map(p => p === '%g' ? { isInput: true, inputIndex: inputIdx++ } : { isInput: false, text: p });
-                this.gapAnswers = new Array(inputIdx).fill('');
+            if (this.currentTask.task_type === 'gap' && this.currentTask.gaps) {
+                let globalInputIdx = 0;
+
+                this.currentTask.gapRows = this.currentTask.gaps.map(gapObj => {
+                    const parts = gapObj.template.split(/(%g%)/g);
+                    return {
+                        parts: parts.map(p => {
+                            if (p === '%g%') {
+                                return { isInput: true, globalIndex: globalInputIdx++ };
+                            }
+                            return { isInput: false, text: p };
+                        })
+                    };
+                });
+
+                this.gapAnswers = new Array(globalInputIdx).fill('');
             }
             if (this.currentTask.task_type === 'code' && this.currentTask.code?.[0]) {
                 this.codeAnswer = this.currentTask.code[0].template;
@@ -339,6 +374,13 @@ function levelApp() {
 
         async submitTask() {
             if (this.isLoading) return;
+
+            if (this.isWrong) {
+                this.isWrong = false;
+                this.isChecked = false;
+                return;
+            }    
+
             this.isLoading = true;
             let answers = this.currentTask.task_type === 'choice' ? this.selectedOptions : (this.currentTask.task_type === 'gap' ? this.gapAnswers : this.codeAnswer);
 
@@ -351,8 +393,11 @@ function levelApp() {
                 if (result.is_correct) {
                     this.codeError = '';
                     this.failedTest = null;
-                    if (this.isLastTask) await this.completeLevel();
-                    else { this.currentTaskIndex++; this.prepareCurrentTask(); }
+
+                    setTimeout(async () => {
+                        if (this.isLastTask) await this.completeLevel();
+                        else { this.currentTaskIndex++; this.prepareCurrentTask(); }
+                    }, 600);    
                 } else {
                     this.isWrong = true;
                     this.shouldShake = true;
