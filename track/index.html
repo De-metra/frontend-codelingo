@@ -41,6 +41,7 @@
                             :style="level.id ? `background: ${getColors(level.status).bottom}` : ''"></div>
 
                         <button 
+                            @click="goToLevel(level.id)"
                             :disabled="!level.id || level.status === 'locked'"
                             :style="level.id ? `background: ${getColors(level.status).top}; border-color: ${getColors(level.status).bottom}` : ''"
                             class="w-20 h-20 rounded-full border-b-7 flex items-center justify-center transition-all"

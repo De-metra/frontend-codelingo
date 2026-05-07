@@ -35,7 +35,7 @@
             <label class="text-lg font-bold text-slate-500">Фото</label>
             <label class="relative block cursor-pointer">
                 <div class="w-full bg-white border-2 border-[#C77DFF] text-[#C77DFF] rounded-2xl py-3 px-6 text-center font-bold text-lg hover:bg-purple-50">
-                    <span x-text="avatarFile ? 'Файл: ' + avatarFile.name : 'Выбрать файл'"></span>
+                    <span x-text="avatarFile ? 'Файл: ' + formatFileName(avatarFile.name) : 'Выбрать файл'"></span>
                 </div>
                 <input type="file" class="hidden" @change="handleFileChange($event)" accept="image/*">
             </label>
@@ -123,6 +123,24 @@ function settingsApp() {
 
         handleFileChange(event) {
             this.avatarFile = event.target.files[0];
+        },
+
+        formatFileName(name) {
+            const maxLength = 15; 
+            
+            if (name.length <= maxLength) return name;
+
+            const lastDot = name.lastIndexOf('.');
+            if (lastDot === -1) return name.substring(0, maxLength) + '...';
+
+            const fileName = name.substring(0, lastDot);
+            const extension = name.substring(lastDot);
+
+            if (fileName.length > maxLength) {
+                return fileName.substring(0, maxLength) + '...' + extension;
+            }
+            
+            return name;
         },
 
         async saveChanges() {
