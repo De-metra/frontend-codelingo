@@ -48,7 +48,7 @@
 
         <!-- Task Step -->
         <template x-if="step === 'task' && currentTask">
-            <div class="animate-fadeIn">
+            <div class="animate-fadeIn" :class="{ 'animate-shake': isWrong }">
                 <h2 class="text-2xl font-bold mb-2" x-text="currentTask.title"></h2>
                 <p class="text-slate-500 mb-8 whitespace-pre-line" x-text="currentTask.description"></p>
 
@@ -134,7 +134,11 @@
             </template>
             <template x-if="step !== 'complete'">
                 <button @click="handleMainAction()" :disabled="isLoading"
-                    :class="isWrong ? 'bg-[#F35D61] shadow-[0_4px_0_0_#D1484C] hover:bg-[#ff6b6f]' : 'bg-[#C77DFF] shadow-[0_4px_0_0_#AA55FF] hover:bg-[#B366FF]'"
+                    :class="{ 
+                        'bg-[#F35D61] shadow-[0_4px_0_0_#D1484C] hover:bg-[#ff6b6f]': isWrong,
+                        'bg-[#C77DFF] shadow-[0_4px_0_0_#AA55FF] hover:bg-[#B366FF]': !isWrong,
+                        'animate-shake': isWrong 
+                    }"
                     class="w-full py-4 disabled:opacity-50 text-white font-bold rounded-2xl active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
                     x-text="isWrong ? 'Попробовать снова' : (step === 'theory' ? 'Далее' : (isLastTask ? 'Завершить' : 'Проверить'))">
                 </button>
