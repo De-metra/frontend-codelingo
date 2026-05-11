@@ -135,7 +135,7 @@ function settingsApp() {
         isDeleting: false,
 
         async init() {
-            if (!this.token) { window.location.href = '/auth/'; return; }
+            if (!this.token) { window.location.href = '/'; return; }
             try {
                 const res = await fetch(`${this.baseUrl}/api/users/me`, {
                     headers: { 'Authorization': `Bearer ${this.token}` }
@@ -194,7 +194,7 @@ function settingsApp() {
 
         confirmLogout() {
             localStorage.removeItem('token');
-            window.location.href = '/auth/';
+            window.location.href = '/';
         },
 
         async confirmDelete() {
@@ -213,7 +213,7 @@ function settingsApp() {
 
                 if (res.ok) {
                     localStorage.removeItem('token');
-                    window.location.href = '/auth/';
+                    window.location.href = '/';
                 } else {
                     const errData = await res.json();
                     alert(errData.detail || 'Ошибка при удалении');

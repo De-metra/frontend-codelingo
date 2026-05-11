@@ -92,7 +92,7 @@
                 baseUrl: window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://api.code-lingo.ru',
 
                 async init() {
-                    if (!this.token) { window.location.href = '/auth/'; return; }
+                    if (!this.token) { window.location.href = '/'; return; }
 
                     if (this.levels.length > 0) {
                         this.processLevels();

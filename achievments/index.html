@@ -81,7 +81,7 @@ function achievementsApp() {
 
         async init() {
             if (!this.token) {
-                window.location.href = '/auth/';
+                window.location.href = '/';
                 return;
             }
             await this.fetchAchievements();
