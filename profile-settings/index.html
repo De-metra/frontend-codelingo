@@ -68,7 +68,7 @@
             <button @click="modals.logout = true" class="text-slate-400 border-b-2 border-slate-200 hover:text-slate-500 transition font-black text-sm uppercase tracking-wider">
                 Выйти из аккаунта
             </button>
-            <button @click="modals.delete = true" class="text-red-400 border-b-2 border-red-100 hover:text-red-500 transition font-black text-sm uppercase tracking-wider">
+            <button @click.stop="modals.softDelete = true; deleteStep = 1" class="text-red-400 border-b-2 border-red-100 hover:text-red-500 transition font-black text-sm uppercase tracking-wider">
                 Удалить аккаунт
             </button>
         </div>
@@ -93,6 +93,30 @@
             </div>
         </div>
     </template>
+
+    <template x-if="modals.softDelete">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+            <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl" @click.outside="modals.softDelete = false; deleteStep = 1">
+                
+                <h3 class="text-xl font-black text-slate-700" x-text="deleteStep === 1 ? 'Вы уверены, что хотите удалить свои учетные данные безвозратно?' : 'Точно? Это действие нельзя отменить'"></h3>
+                
+                <div class="flex flex-col gap-3">
+                    <button @click="confirmDelete()" 
+                            :disabled="isDeleting"
+                            class="w-full py-4 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 disabled:opacity-50">
+                        <span x-show="!isDeleting" x-text="deleteStep === 1 ? 'Да, продолжить' : 'Да, удалить навсегда'"></span>
+                        <span x-show="isDeleting">Удаление...</span>
+                    </button>
+                    
+                    <button @click="modals.softDelete = false; deleteStep = 1" 
+                            :disabled="isDeleting"
+                            class="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
 
 <script>
@@ -106,7 +130,9 @@ function settingsApp() {
             username: '',
             theme: 'light' 
         },
-        modals: { logout: false, delete: false },
+        modals: { logout: false, softDelete: false },
+        deleteStep: 1,
+        isDeleting: false,
 
         async init() {
             if (!this.token) { window.location.href = '/auth/'; return; }
@@ -169,7 +195,38 @@ function settingsApp() {
         confirmLogout() {
             localStorage.removeItem('token');
             window.location.href = '/auth/';
-        }
+        },
+
+        async confirmDelete() {
+
+            if (this.deleteStep === 1) {
+                this.deleteStep = 2;
+                return;
+            }
+
+            this.isDeleting = true;
+            try {
+                const res = await fetch(`${this.baseUrl}/api/users/delete-me`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+
+                if (res.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/auth/';
+                } else {
+                    const errData = await res.json();
+                    alert(errData.detail || 'Ошибка при удалении');
+                    this.modals.softDelete = false;
+                    this.deleteStep = 1;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка соединения с сервером');
+            } finally {
+                this.isDeleting = false;
+            }
+        },  
     }
 }
 </script>

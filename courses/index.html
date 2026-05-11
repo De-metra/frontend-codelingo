@@ -34,11 +34,11 @@
                 >
                     <div class="flex-1">
                         <h2 class="text-xl font-bold mb-1 group-hover:text-[#c084fc] transition-colors" x-text="course.title"></h2>
-                        <p class="text-sm text-gray-500 leading-relaxed line-clamp-2" x-text="course.description"></p>
+                        <p class="text-sm text-gray-500 leading-relaxed" x-text="course.description"></p>
                     </div>
                     
                     <div class="w-20 h-20 shrink-0 flex items-center justify-center overflow-hidden p-2">
-                        <img :src="course.course_icon ? course.course_icon : '/public/course-icon.svg'" 
+                        <img :src="course.icon ? course.icon : '/public/course-icon.svg'" 
                             :alt="course.title" 
                             class="w-full h-auto transform group-hover:scale-110 transition-transform">
                     </div>
