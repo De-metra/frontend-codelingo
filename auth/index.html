@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/robot.svg" type="image/svg+xml">
     <title>Авторизация | CodeLingo</title>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,25 +49,21 @@
             <div class="space-y-4">
                 
                 <!-- Регистрация: Имя -->
-                <template x-if="mode === 'register'">
+                <template x-if="mode === 'register' && step === 1">
                     <div class="relative">
                         <input type="text" x-model="formData.username" placeholder="Имя"
                             class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
                     </div>
                 </template>
 
-                <!-- Вход / Регистрация / Забыли (Почта) -->
-                <!-- Скрываем почту только на шаге ввода кода и нового пароля в режиме восстановления, 
-                     но она нам нужна в formData для запросов -->
-                <template x-if="mode !== 'forgot' || (mode === 'forgot' && step === 1)">
+                <template x-if="step === 1">
                     <div class="relative">
                         <input type="email" x-model="formData.email" placeholder="Почта"
                             class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
                     </div>
                 </template>
 
-                <!-- Вход / Регистрация (Пароль) -->
-                <template x-if="mode === 'login' || mode === 'register'">
+                <template x-if="(mode === 'login' || mode === 'register') && step === 1">
                     <div class="relative">
                         <input :type="showPassword ? 'text' : 'password'" x-model="formData.password" placeholder="Пароль"
                             class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-all placeholder-gray-400 font-medium">
@@ -79,17 +76,23 @@
                     </div>
                 </template>
 
-                <!-- Восстановление: Шаг 2 (Код) -->
-                <template x-if="mode === 'forgot' && step === 2">
-                    <div>
-                        <p class="text-center text-sm text-gray-400 mb-4">Код отправлен на <span class="text-gray-600 font-bold" x-text="formData.email"></span></p>
-                        <div class="flex justify-between gap-2 py-2" @paste="handlePaste($event)">
+                <!-- ОБЩИЙ МАКЕТ ВВОДА КОДА (Для Регистрации Шаг 2 и Восстановления Шаг 2) -->
+                <template x-if="step === 2">
+                    <div class="w-full">
+                        <p class="text-center text-sm text-gray-400 mb-6">
+                            Код подтверждения отправлен на <br>
+                            <span class="text-gray-600 font-bold" x-text="formData.email"></span>
+                        </p>
+                        
+                        <!-- Контейнер с принудительным центрированием -->
+                        <div class="flex justify-center items-center gap-2 sm:gap-3 py-2" @paste="handlePaste($event)">
                             <template x-for="i in 6" :key="i">
                                 <input type="text" maxlength="1" 
                                     :id="'code-' + i"
                                     @input="handleCodeInput($event, i)"
                                     @keydown.backspace="handleBackspace($event, i)"
-                                    class="w-12 h-14 text-center text-xl font-black border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 transition-all">
+                                    class="w-10 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-400 transition-all bg-white"
+                                >
                             </template>
                         </div>
                     </div>
@@ -104,7 +107,7 @@
                     </div>
                 </template>
 
-                <!-- Забыли пароль? -->
+                <!-- Кнопка "Забыли пароль" (только при входе) -->
                 <template x-if="mode === 'login'">
                     <div class="text-right">
                         <button @click="mode = 'forgot'; step = 1" class="text-sm font-bold text-gray-400 hover:text-purple-500 transition-colors">
@@ -149,6 +152,16 @@
                 },
 
                 toast: { show: false, message: '', type: 'success' },
+
+                init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const modeParam = urlParams.get('mode');
+                    
+                    // Если в URL есть mode=register или mode=forgot, меняем состояние
+                    if (['register', 'forgot', 'login'].includes(modeParam)) {
+                        this.mode = modeParam;
+                    }
+                },
 
                 showToast(msg, type = 'success') {
                     this.toast.message = msg;
@@ -217,7 +230,10 @@
 
                 getLabel() {
                     if (this.mode === 'login') return { title: 'Авторизация', button: 'Войти', switch: 'Еще нет аккаунта? Зарегистрироваться' };
-                    if (this.mode === 'register') return { title: 'Регистрация', button: 'Зарегистрироваться', switch: 'Уже есть аккаунт? Войти' };
+                    if (this.mode === 'register') {
+                        if (this.step === 1) return { title: 'Регистрация', button: 'Продолжить', switch: 'Уже есть аккаунт? Войти' };
+                        if (this.step === 2) return { title: 'Подтверждение', button: 'Завершить', switch: 'Изменить данные' };
+                    }
                     if (this.mode === 'forgot') {
                         if (this.step === 1) return { title: 'Восстановление', button: 'Получить код', switch: 'Вернуться назад' };
                         if (this.step === 2) return { title: 'Ввод кода', button: 'Подтвердить', switch: 'Изменить почту' };
@@ -227,8 +243,8 @@
 
                 toggleMode() {
                     this.errorMessage = '';
-                    if (this.mode === 'forgot') {
-                        this.mode = 'login';
+                    this.formData.code = '';
+                    if (this.step > 1) {
                         this.step = 1;
                     } else {
                         this.mode = this.mode === 'login' ? 'register' : 'login';
@@ -250,7 +266,7 @@
                 },
 
                 handlePaste(e) {
-                    const data = e.clipboardData.getData('text').slice(0, 6).split('');
+                    const data = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
                     data.forEach((char, i) => {
                         const input = document.getElementById(`code-${i + 1}`);
                         if (input) input.value = char;
@@ -261,8 +277,6 @@
                 syncCode() {
                     const inputs = Array.from(document.querySelectorAll('[id^="code-"]'));
                     this.formData.code = inputs.map(i => i.value).join('');
-                    
-                    // Авто-отправка если введено 6 символов
                     if (this.formData.code.length === 6) {
                         this.submitForm();
                     }
@@ -275,11 +289,14 @@
                         body: JSON.stringify(body)
                     });
                     
+                    // Сначала извлекаем данные
+                    const data = await response.json();
+
                     if (!response.ok) {
-                        const data = await response.json();
                         throw new Error(data.detail || 'Произошла ошибка');
                     }
-                    return response;
+                    
+                    return data; // Возвращаем уже распарсенный JSON (объект с токеном)
                 },
 
                 async submitForm() {
@@ -293,11 +310,10 @@
                     try {
                         // 1. ЛОГИН
                         if (this.mode === 'login') {
-                            const res = await this.apiRequest('/api/auth/login', {
+                            const data = await this.apiRequest('/api/auth/login', {
                                 email: this.formData.email,
                                 password: this.formData.password
                             });
-                            const data = await res.json();
                             localStorage.setItem('token', data.access_token);
                             this.showToast('С возвращением!');
                             window.location.href = '/track/';
@@ -305,9 +321,24 @@
                         
                         // 2. РЕГИСТРАЦИЯ
                         else if (this.mode === 'register') {
-                            await this.apiRequest('/api/auth/register', this.formData);
-                            this.showToast('Аккаунт создан!');
-                            this.mode = 'login'; // После регистрации отправляем логиниться
+                            if (this.step === 1) {
+                                await this.apiRequest('/api/auth/register', {
+                                    username: this.formData.username,
+                                    email: this.formData.email,
+                                    password: this.formData.password
+                                });
+                                this.showToast('Код отправлен на почту');
+                                this.step = 2;
+                            } else {
+                                const data = await this.apiRequest('/api/auth/verify-email', { 
+                                    email: this.formData.email, 
+                                    code: this.formData.code 
+                                });
+                                localStorage.setItem('token', data.access_token);
+                                this.token = data.access_token;
+                                this.showToast('Почта подтверждена!');
+                                window.location.href = '/track/';
+                            }
                         }
 
                         // 3. ВОССТАНОВЛЕНИЕ (3 ШАГА)
