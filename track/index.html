@@ -6,6 +6,11 @@
     <title>Карта уровней</title>
     <style>
         [x-cloak] { display: none !important; }
+        html, body {
+            overflow-x: hidden;
+            position: relative;
+            width: 100%;
+        }
         @keyframes pulse { 50% { opacity: .5; } }
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
@@ -71,7 +76,7 @@
             </template>
         </div>
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-2xl flex justify-around items-center">
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-2xl flex justify-around items-center z-50">
             <a href="/achievments/" class="p-2"><img src="/public/achiev-icon.svg" class="h-8 w-8"></a>
             <a href="#" class="p-2 bg-purple-200 rounded-full"><img src="/public/book-icon.svg" class="h-8 w-8"></a>
             <a href="/profile/" class="p-2"><img src="/public/robot-icon.svg" class="h-8 w-8"></a>
